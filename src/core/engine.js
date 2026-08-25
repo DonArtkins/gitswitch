@@ -40,6 +40,6 @@ export async function runEngine(args = []) {
     return execa(engine, args, { stdio: 'inherit', reject: false });
   }
   // Not permanently installed yet → run the bundled copy straight through bash,
-  // so `npx gitswitch-cli` gives full functionality even without installation.
+  // so `npx gitswitch-wizard` gives full functionality even without installation.
   return execa('bash', [VENDOR_SCRIPT, ...args], { stdio: 'inherit', reject: false });
 }

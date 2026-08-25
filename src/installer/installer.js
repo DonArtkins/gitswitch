@@ -34,7 +34,7 @@ export async function installBinary(targetDir) {
  */
 export async function ensureOnPath(dir) {
   const rcs = ['.bashrc', '.zshrc'].map((f) => path.join(os.homedir(), f));
-  const marker = '# gitswitch-cli PATH';
+  const marker = '# gitswitch-wizard PATH';
   let touched = false;
 
   for (const rc of rcs) {
@@ -57,7 +57,7 @@ export async function ensureOnPath(dir) {
  */
 export async function addSshAgentRc() {
   const bashrc = path.join(os.homedir(), '.bashrc');
-  const marker = '# GitSwitch SSH Agent — auto-start (managed by gitswitch-cli)';
+  const marker = '# GitSwitch SSH Agent — auto-start (managed by gitswitch-wizard)';
   const content = fs.existsSync(bashrc) ? fs.readFileSync(bashrc, 'utf8') : '';
   if (content.includes('GitSwitch SSH Agent')) return false;
 

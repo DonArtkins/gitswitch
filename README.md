@@ -2,7 +2,7 @@
 
 > **Multi-GitHub Account Manager for Linux**  
 > Seamlessly switch between multiple GitHub accounts using SSH — no more logging in and out.  
-> Now available on npm as **`gitswitch-cli`**, with an install/update wizard that never touches SSH configs it doesn't own.
+> Now available on npm as **`gitswitch-wizard`**, with an install/update wizard that never touches SSH configs it doesn't own.
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Feature | Details |
 |---|---|
-| 📦 **npm package** | Install or update via `npx gitswitch-cli` — zero clone needed |
+| 📦 **npm package** | Install or update via `npx gitswitch-wizard` — zero clone needed |
 | 🧙 **Install/Update Wizard** | Detects existing installs, updates in place, preserves all data |
 | 🛡 **SSH safety guarantee** | Only ever *appends* its own `Host github.com-<user>` blocks; foreign hosts stay byte-for-byte untouched |
 | 🏢 **Organization accounts** | First-class org support; repos auto-create under `orgs/<org>/repos` API |
@@ -58,7 +58,7 @@
 Zero-install wizard via npx — it detects your setup first:
 
 ```bash
-npx gitswitch-cli
+npx gitswitch-wizard
 ```
 
 The wizard will:
@@ -75,7 +75,7 @@ gitswitch uninstall  # remove GitSwitch (asks before deleting anything)
 Or install permanently from npm:
 
 ```bash
-npm install -g gitswitch-cli
+npm install -g gitswitch-wizard
 ```
 
 ### 🔧 Option B — classic shell installer
@@ -116,7 +116,7 @@ gitswitch/                  ← Project folder (keep this)
 ├── gitswitch.sh            ← Bash engine (source of truth)
 ├── install.sh              ← Classic installer (Option B)
 ├── uninstall.sh            ← Classic uninstaller
-├── package.json            ← npm package manifest (gitswitch-cli)
+├── package.json            ← npm package manifest (gitswitch-wizard)
 ├── bin/gitswitch.js        ← npx entry point
 ├── vendor/gitswitch.sh     ← Engine copy bundled into the npm tarball
 ├── src/                    ← Node wizard (installer/updater CLI)
@@ -384,11 +384,11 @@ Choose whether to keep or delete your stored accounts.
 
 ---
 
-## ⌨️ CLI Reference (`gitswitch-cli`)
+## ⌨️ CLI Reference (`gitswitch-wizard`)
 
 | Command | Description |
 |---|---|
-| `npx gitswitch-cli` | Run the install / update wizard (no install needed) |
+| `npx gitswitch-wizard` | Run the install / update wizard (no install needed) |
 | `gitswitch` *(no args)* | Open the interactive GitSwitch menu |
 | `gitswitch use <account>` | ⭐ Set the active account (quick switch) |
 | `gitswitch whoami` | Show the currently active account |
@@ -406,7 +406,7 @@ Choose whether to keep or delete your stored accounts.
 GitSwitch is a **two-layer** tool:
 
 1. **Bash engine** (`gitswitch.sh`) — all account management: SSH keys, config blocks, git identities, GitHub API calls. This is the source of truth.
-2. **Node wizard** (`src/`) — an npm-distributed installer/updater built with [citty](https://github.com/unjs/citty) + [@clack/prompts](https://github.com/bombshell-dev/clack). It detects existing installs, updates the engine binary in place, and guarantees existing SSH data is never touched. If no engine is installed yet, it runs the bundled copy from `vendor/` straight through bash — so `npx gitswitch-cli` works even on a fresh machine.
+2. **Node wizard** (`src/`) — an npm-distributed installer/updater built with [citty](https://github.com/unjs/citty) + [@clack/prompts](https://github.com/bombshell-dev/clack). It detects existing installs, updates the engine binary in place, and guarantees existing SSH data is never touched. If no engine is installed yet, it runs the bundled copy from `vendor/` straight through bash — so `npx gitswitch-wizard` works even on a fresh machine.
 
 ### Workflow
 
@@ -441,7 +441,7 @@ Publishing uses **npm Trusted Publishing (OIDC)** via GitHub Actions — no long
 
 > ⚠️ Every publish needs a never-before-used SemVer — npm does not allow overwriting versions.
 
-> ℹ️ The npm name is `gitswitch-cli`; the installed command is `gitswitch`.
+> ℹ️ The npm name is `gitswitch-wizard`; the installed command is `gitswitch`.
 
 ---
 
