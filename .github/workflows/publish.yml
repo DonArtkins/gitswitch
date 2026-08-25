@@ -39,5 +39,4 @@ jobs:
       - name: Dry run
         run: npm publish --dry-run --access public
       - name: Publish (OIDC — no NPM token stored)
-        if: github.event_name == 'release'
         run: npm publish --access public
