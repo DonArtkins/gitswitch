@@ -27,13 +27,30 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org/'
+      - name: Guard against stale re-runs
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$BRANCH"
+          BEHIND=$(git rev-list --count "HEAD..origin/$BRANCH")
+          if [ "$BEHIND" != "0" ]; then
+            echo "::error::This run checked out a commit $BEHIND commit(s) behind origin/$BRANCH."
+            echo "::error::You likely used 'Re-run failed jobs', which pins the ORIGINAL stale commit."
+            echo "::error::Fix: Actions → Publish to NPM → 'Run workflow' (a FRESH dispatch). Never re-run failed release jobs."
+            exit 1
+          fi
       - name: Bump version (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           npm version "${{ inputs.bump }}" -m "chore(release): %s"
-          git push origin "HEAD:${{ github.ref_name }}" --follow-tags
+          git push origin "HEAD:$BRANCH" --follow-tags
       - run: npm ci || npm install
       - run: npm test
       - name: Dry run

@@ -428,20 +428,38 @@ npm run publish:dry-run   # inspect the exact tarball that would ship
 
 ### 🚀 Publishing to npm
 
-Publishing uses **npm Trusted Publishing (OIDC)** via GitHub Actions — no long-lived tokens stored anywhere:
+**Releases are done from the terminal** using the built-in shortcuts:
 
-- **Preferred:** run the **"Publish to NPM"** workflow from the Actions tab and pick a SemVer bump (`patch`, `minor`, `major`). It tests, bumps, tags, dry-runs, and publishes.
-- **Manual fallback:**
-  ```bash
-  npm test
-  npm version patch -m "chore(release): %s"
-  git push --follow-tags
-  npm publish --access public --provenance
-  ```
+```bash
+# From a clean master branch:
+npm run release:patch   # 2.0.3 -> 2.0.4 (bug fixes)
+npm run release:minor   # 2.0.3 -> 2.1.0 (new features)
+npm run release:major   # 2.0.3 -> 3.0.0 (breaking changes)
+
+# Then ship it:
+npm publish --access public
+```
+
+Each `release:*` script automatically runs the full test suite, bumps `package.json` + lockfile, creates the release commit and tags `vX.Y.Z`, and pushes both to GitHub.
 
 > ⚠️ Every publish needs a never-before-used SemVer — npm does not allow overwriting versions.
 
 > ℹ️ The npm name is **`gitswitch-wizard`**; the installed command is **`gitswitch`**.
+
+<details>
+<summary><b>Alternative: publishing via GitHub Actions</b></summary>
+
+The repo also ships a **"Publish to NPM"** workflow (`.github/workflows/publish.yml`) that tests, bumps, tags and publishes via **npm Trusted Publishing (OIDC)** — no tokens stored. To use it, configure the Trusted Publisher on your package's npm Settings → Security page:
+
+| Field | Value |
+|---|---|
+| Organization or user | `DonArtkins` *(your GitHub username)* |
+| Repository | `gitswitch` |
+| Workflow filename | `publish.yml` |
+| Environment name | *(leave blank)* |
+
+⚠️ Never use "Re-run failed jobs" on release workflows — re-runs pin the original stale commit and fail with `fatal: tag 'vX.Y.Z' already exists`. Always dispatch a fresh run.
+</details>
 
 ---
 
@@ -485,21 +503,25 @@ This lets the "Publish to NPM" workflow publish **without storing any npm token*
    cp gitswitch.sh vendor/gitswitch.sh
    ```
 2. Commit and push to `master`.
-3. GitHub → **Actions** → **"Publish to NPM"** → **Run workflow** → pick `patch` / `minor` / `major`.
-4. The workflow will: run tests → bump `package.json` → commit `chore(release): X.Y.Z` → push tag → dry-run → **publish via OIDC**.
-5. Verify:
+3. Cut the release from the terminal:
    ```bash
-   npm view gitswitch-wizard version   # shows the new version
-   npx gitswitch-wizard@latest version # engine version users will get
+   git pull origin master        # start from a clean head
+   npm run release:patch         # or minor / major — runs tests + bumps + tags + pushes
+   npm publish --access public   # ship it 🚀
    ```
-6. Check the Actions log is green; the new version appears under the package's **Versions** tab with a "Provenance" badge.
+4. Verify:
+   ```bash
+   npm view gitswitch-wizard version   # shows the new version (~1 min CDN delay)
+   npx gitswitch-wizard version        # engine version users will get
+   ```
 
-### Troubleshooting a failed publish
+### Troubleshooting a failed release
 | Symptom | Fix |
 |---|---|
-| `403 Forbidden` in Actions | Re-check the three Trusted Publisher fields (Step 2) — typo in repo/workflow name is the usual culprit |
+| `403 Forbidden - name too similar` | Package name conflicts with an existing one — pick another name |
 | `EPUBLISHCONFLICT` / version exists | Bump again — versions are immutable on npm |
-| Workflow bumped but didn't publish | Check the Actions log; ensure you're on `DonArtkins/gitswitch` and the workflow file is named `publish.yml` |
+| `fatal: tag 'vX.Y.Z' already exists` | That version was already bumped/tagged; just run `npm publish --access public`, or bump again |
+| `EOTP` / hangs waiting for code | Your account requires 2FA — enter the authenticator code when prompted |
 
 ---
 

@@ -18,7 +18,10 @@
   "scripts": {
     "test": "npm run test:syntax && node --test",
     "test:syntax": "bash -n vendor/gitswitch.sh",
-    "publish:dry-run": "npm publish --dry-run --access public"
+    "publish:dry-run": "npm publish --dry-run --access public",
+    "release:patch": "npm test && npm version patch -m \"chore(release): %s\" && git push --follow-tags",
+    "release:minor": "npm test && npm version minor -m \"chore(release): %s\" && git push --follow-tags",
+    "release:major": "npm test && npm version major -m \"chore(release): %s\" && git push --follow-tags"
   },
   "repository": {
     "type": "git",
