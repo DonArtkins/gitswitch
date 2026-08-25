@@ -38,5 +38,5 @@ jobs:
       - run: npm test
       - name: Dry run
         run: npm publish --dry-run --access public
-      - name: Publish (OIDC — no NPM token stored)
-        run: npm publish --access public
+      - name: Publish (OIDC — no NPM token stored, signed provenance)
+        run: npm publish --access public --provenance

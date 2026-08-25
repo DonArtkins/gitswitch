@@ -426,22 +426,80 @@ npm test          # bash syntax check + unit tests
 npm run publish:dry-run   # inspect the exact tarball that would ship
 ```
 
-### Publishing to npm
+### 🚀 Publishing to npm
 
-Publishing uses **npm Trusted Publishing (OIDC)** via GitHub Actions — no long-lived tokens stored:
+Publishing uses **npm Trusted Publishing (OIDC)** via GitHub Actions — no long-lived tokens stored anywhere:
 
-- **Preferred:** push to `master`, then run the **"Publish to NPM"** workflow from the Actions tab and pick a SemVer bump. It tests, bumps, tags, dry-runs, and publishes.
+- **Preferred:** run the **"Publish to NPM"** workflow from the Actions tab and pick a SemVer bump (`patch`, `minor`, `major`). It tests, bumps, tags, dry-runs, and publishes.
 - **Manual fallback:**
   ```bash
   npm test
   npm version patch -m "chore(release): %s"
   git push --follow-tags
-  npm publish --access public
+  npm publish --access public --provenance
   ```
 
 > ⚠️ Every publish needs a never-before-used SemVer — npm does not allow overwriting versions.
 
-> ℹ️ The npm name is `gitswitch-wizard`; the installed command is `gitswitch`.
+> ℹ️ The npm name is **`gitswitch-wizard`**; the installed command is **`gitswitch`**.
+
+---
+
+## 🔐 Post-Deployment Setup (one-time)
+
+Do these **once**, right after the first successful `npm publish`:
+
+### Step 1 — Verify the package is live
+```bash
+npm view gitswitch-wizard version   # should print the published version
+npx gitswitch-wizard@latest doctor  # smoke-test from any directory
+```
+
+### Step 2 — Connect GitHub Actions as a Trusted Publisher
+
+This lets the "Publish to NPM" workflow publish **without storing any npm token**:
+
+1. Go to your package page: `https://www.npmjs.com/package/gitswitch-wizard`
+2. **Settings** → find the **Security / Publishing access** section → **Trusted Publisher**
+3. Fill in EXACTLY:
+   | Field | Value |
+   |---|---|
+   | Organization or user | `DonArtkins` |
+   | Repository | `gitswitch` |
+   | Workflow filename | `publish.yml` |
+   | Environment name | *(leave blank)* |
+4. Save.
+
+> The workflow filename must match `.github/workflows/publish.yml` byte-for-byte. A mismatch here is the #1 cause of mysterious `403 Forbidden` errors in CI.
+
+### Step 3 — (Optional) Harden your account
+- On the same settings page you can require **2FA to publish** manually — CI releases via Trusted Publishing keep working regardless.
+- Releases are published with **provenance** (signed build provenance), which shows a "Verified" badge on npmjs.com.
+
+---
+
+## 🔁 Every Future Release (cheat sheet)
+
+1. Make your changes; if you touched `gitswitch.sh`, sync it:
+   ```bash
+   cp gitswitch.sh vendor/gitswitch.sh
+   ```
+2. Commit and push to `master`.
+3. GitHub → **Actions** → **"Publish to NPM"** → **Run workflow** → pick `patch` / `minor` / `major`.
+4. The workflow will: run tests → bump `package.json` → commit `chore(release): X.Y.Z` → push tag → dry-run → **publish via OIDC**.
+5. Verify:
+   ```bash
+   npm view gitswitch-wizard version   # shows the new version
+   npx gitswitch-wizard@latest version # engine version users will get
+   ```
+6. Check the Actions log is green; the new version appears under the package's **Versions** tab with a "Provenance" badge.
+
+### Troubleshooting a failed publish
+| Symptom | Fix |
+|---|---|
+| `403 Forbidden` in Actions | Re-check the three Trusted Publisher fields (Step 2) — typo in repo/workflow name is the usual culprit |
+| `EPUBLISHCONFLICT` / version exists | Bump again — versions are immutable on npm |
+| Workflow bumped but didn't publish | Check the Actions log; ensure you're on `DonArtkins/gitswitch` and the workflow file is named `publish.yml` |
 
 ---
 
