@@ -1,0 +1,49 @@
+{
+  "name": "gitswitch-cli",
+  "version": "1.0.0",
+  "description": "GitSwitch Wizard — multi-GitHub account manager installer & updater. Installs, updates and manages GitSwitch without touching SSH configs it doesn't own.",
+  "type": "module",
+  "main": "src/cli.js",
+  "bin": {
+    "gitswitch": "bin/gitswitch.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "vendor/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "npm run test:syntax && node --test",
+    "test:syntax": "bash -n vendor/gitswitch.sh",
+    "publish:dry-run": "npm publish --dry-run --access public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DonArtkins/gitswitch.git"
+  },
+  "homepage": "https://github.com/DonArtkins/gitswitch#readme",
+  "bugs": {
+    "url": "https://github.com/DonArtkins/gitswitch/issues"
+  },
+  "keywords": [
+    "git",
+    "github",
+    "ssh",
+    "multi-account",
+    "account-switcher",
+    "gitswitch",
+    "wizard",
+    "cli"
+  ],
+  "author": "DonArtkins (https://github.com/DonArtkins)",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "citty": "^0.2.2",
+    "execa": "^8.0.1",
+    "picocolors": "^1.1.1"
+  }
+}
