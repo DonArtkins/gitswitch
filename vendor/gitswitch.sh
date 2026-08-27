@@ -41,8 +41,8 @@ print_header() {
     clear
     echo ""
     echo -e "${CYAN}${BOLD}  ╔══════════════════════════════════════════╗${RESET}"
-    echo -e "${CYAN}${BOLD}  ║        GitSwitch v2.0  🔀                ║${RESET}"
-    echo -e "${CYAN}${BOLD}  ║   Multi-GitHub Account Manager v$GS_VERSION ║${RESET}"
+    echo -e "${CYAN}${BOLD}  ║         ⚡ GitSwitch 🔀 v$GS_VERSION        ║${RESET}"
+    echo -e "${CYAN}${BOLD}  ║     Multi-GitHub Account Manager         ║${RESET}"
     echo -e "${CYAN}${BOLD}  ╚══════════════════════════════════════════╝${RESET}"
     echo ""
 }
@@ -64,8 +64,12 @@ check_deps() {
 }
 
 # SSH Agent
+# NOTE: only START an agent when SSH_AUTH_SOCK is unset/empty.
+# The old condition (`|| ! ssh-add -l`) re-spawned a brand-new empty agent on
+# every call whenever no keys were loaded yet, leaking orphan ssh-agent
+# processes with each menu interaction.
 ensure_agent() {
-    if [ -z "$SSH_AUTH_SOCK" ] || ! ssh-add -l &>/dev/null; then
+    if [ -z "$SSH_AUTH_SOCK" ]; then
         step "Starting SSH agent..."
         eval "$(ssh-agent -s)" >/dev/null 2>&1
     fi
@@ -95,58 +99,69 @@ get_active() { cat "$ACTIVE_FILE" 2>/dev/null; }
 set_active() { echo "$1" > "$ACTIVE_FILE"; }
 
 # Account selector (defaults to the active ⭐ account)
+# CONTRACT: ALL UI goes to stderr — stdout carries ONLY the chosen username,
+# so callers can safely do USER=$(select_account).
 select_account() {
     init_store
-    local accounts active sel
+    local accounts active sel acc PICK idx
     accounts=$(jq -r '.[].user' "$DATA" 2>/dev/null)
-    [ -z "$accounts" ] && { err "No accounts found. Add one first (option 1)."; return 1; }
+    if [ -z "$accounts" ]; then
+        err "No accounts found. Add one first (option 1)." >&2
+        return 1
+    fi
 
     active=$(get_active)
     echo "$accounts" | grep -qx "$active" || active=""
 
+    local opts=()
     if command -v fzf &>/dev/null; then
         local marked
         marked=$(echo "$accounts" | awk -v a="$active" 'NF{ print ($0==a ? $0 "  ⭐" : $0) }')
         sel=$(echo "$marked" | fzf --prompt="🔍 Select account (⭐ = active): " --height=40% --border --ansi)
         [ -z "$sel" ] && return 1
         echo "${sel%  ⭐}"
-    else
-        echo ""
-        echo -e "${CYAN}${BOLD}Select an account:${RESET}  ${DIM}(Enter = active account)${RESET}"
-        sep
-        local i=1
-        local opts=()
-        while IFS= read -r acc; do
-            if [ "$acc" = "$active" ]; then
-                echo -e "  ${GREEN}$i)${RESET} $acc ${GREEN}⭐ active${RESET}"
-            else
-                echo -e "  ${GREEN}$i)${RESET} $acc"
-            fi
-            opts+=("$acc")
-            ((i++))
-        done <<< "$accounts"
-        echo ""
-        if [ -n "$active" ]; then
-            read -rp "$(echo -e "${BOLD}Choice [Enter = $active]: ${RESET}")" PICK
-        else
-            read -rp "$(echo -e "${BOLD}Choice: ${RESET}")" PICK
-        fi
-        if [ -z "$PICK" ]; then
-            if [ -n "$active" ]; then
-                echo "$active"
-            else
-                err "No active account set — pick a number."
-            fi
-            return
-        fi
-        local idx=$(( PICK - 1 ))
-        if [ -n "${opts[$idx]}" ]; then
-            echo "${opts[$idx]}"
-        else
-            err "Invalid selection."
-            return 1
-        fi
+        return 0
     fi
+
+    echo "" >&2
+    echo -e "${CYAN}${BOLD}Select an account:${RESET}  ${DIM}(Enter = active account)${RESET}" >&2
+    sep >&2
+    local i=1
+    while IFS= read -r acc; do
+        if [ "$acc" = "$active" ]; then
+            echo -e "  ${GREEN}$i)${RESET} $acc ${GREEN}⭐ active${RESET}" >&2
+        else
+            echo -e "  ${GREEN}$i)${RESET} $acc" >&2
+        fi
+        opts+=("$acc")
+        ((i++))
+    done <<< "$accounts"
+    echo "" >&2
+
+    if [ -n "$active" ]; then
+        read -rp "$(echo -e "${BOLD}Choice [Enter = $active]: ${RESET}")" PICK
+    else
+        read -rp "$(echo -e "${BOLD}Choice: ${RESET}")" PICK
+    fi
+
+    if [ -z "$PICK" ]; then
+        if [ -n "$active" ]; then
+            echo "$active"
+            return 0
+        fi
+        err "No active account set — pick a number." >&2
+        return 1
+    fi
+
+    # Non-numeric input previously fell through bash arithmetic as option 1!
+    [[ "$PICK" =~ ^[0-9]+$ ]] || { err "Invalid selection." >&2; return 1; }
+    idx=$((PICK - 1))
+    if [ -n "${opts[$idx]:-}" ]; then
+        echo "${opts[$idx]}"
+        return 0
+    fi
+    err "Invalid selection." >&2
+    return 1
 }
 
 # Remove SSH config block for a user
@@ -240,6 +255,11 @@ save_account() {
     fi
 
     chmod 600 "$KEY"
+    # Imported private keys often have no sibling ".pub" — derive it so the
+    # later "copy this key to GitHub" step can never fail with a missing file.
+    if [ ! -f "${KEY}.pub" ]; then
+        ssh-keygen -y -f "$KEY" > "${KEY}.pub" || { err "Could not derive public key from '$KEY'."; return; }
+    fi
     chmod 644 "${KEY}.pub"
     ensure_agent
     ssh-add "$KEY"
@@ -443,8 +463,12 @@ apply_identity() {
         repo=$(echo "$remote" \
             | sed 's|.*github\.com[:/]\(.*\)\.git|\1|' \
             | sed 's|.*github\.com[:/]\(.*\)|\1|')
-        git remote set-url origin "git@github.com-$USERNAME:$repo.git"
-        ok "Remote → git@github.com-$USERNAME:$repo.git"
+        if [ -n "$repo" ]; then
+            git remote set-url origin "git@github.com-$USERNAME:$repo.git"
+            ok "Remote → git@github.com-$USERNAME:$repo.git"
+        else
+            info "Origin URL '${remote}' not recognised — leaving remote untouched."
+        fi
     fi
     ok "Identity applied: $USERNAME <$EMAIL>"
 }
@@ -478,12 +502,16 @@ init_repo() {
             api_url="https://api.github.com/orgs/$USER/repos"
             info "Creating under organization '$USER' (requires write access + PAT with repo scope)."
         fi
-        local http_code
-        http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+        local payload http_code
+        # Build the JSON via jq so repo names / descriptions containing quotes
+        # or backslashes can never corrupt the request body.
+        payload=$(jq -nc --arg name "$REPO" --arg desc "$DESC" --argjson priv "$IS_PRIVATE" \
+            '{name:$name, private:$priv} + (if ($desc|length)>0 then {description:$desc} else {} end)')
+        http_code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "$api_url" \
-            -d "{\"name\":\"$REPO\",\"private\":$IS_PRIVATE,\"description\":\"$DESC\"}")
+            --data "$payload")
         [ "$http_code" = "201" ] \
             && ok "Repo '$REPO' created on GitHub!" \
             || warn "GitHub API returned HTTP $http_code. Create repo manually at github.com/new"

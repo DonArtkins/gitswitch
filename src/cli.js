@@ -11,6 +11,19 @@ const pkg = require('../package.json');
 /** Commands forwarded straight to the GitSwitch bash engine. */
 const ENGINE_COMMANDS = ['whoami', 'active', 'list', 'accounts', 'version', '--version', '-v', 'help', '-h'];
 
+/**
+ * Forward argv to the bash engine and mirror its exit status onto this
+ * process, so scripts calling `gitswitch use <bad-name>` see real failures
+ * instead of silent success.
+ */
+async function forwardEngine(argv) {
+  const res = await runEngine(argv);
+  if (res && Number.isInteger(res.exitCode) && res.exitCode !== 0) {
+    process.exitCode = res.exitCode;
+  }
+  return res;
+}
+
 function printUsage() {
   console.log(`
 ${pc.bold('gitswitch')} ${pc.dim(`v${pkg.version}`)} — multi-GitHub account manager
@@ -48,9 +61,9 @@ const main = defineCommand({
         return runUninstallWizard();
       case 'use':
       case 'switch':
-        return runEngine(['use', ...rest]);
+        return forwardEngine(['use', ...rest]);
       default:
-        if (ENGINE_COMMANDS.includes(cmd)) return runEngine(args._);
+        if (ENGINE_COMMANDS.includes(cmd)) return forwardEngine(args._);
         console.error(pc.red(`Unknown command: ${cmd}`));
         printUsage();
         process.exitCode = 1;

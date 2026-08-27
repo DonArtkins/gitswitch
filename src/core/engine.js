@@ -1,9 +1,14 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-/** Absolute path to the bundled bash engine shipped inside the npm package. */
-export const VENDOR_SCRIPT = new URL('../../vendor/gitswitch.sh', import.meta.url).pathname;
+/**
+ * Absolute path to the bundled bash engine shipped inside the npm package.
+ * NOTE: fileURLToPath is mandatory here — a raw URL pathname silently
+ * corrupts any install path containing spaces or non-ASCII characters.
+ */
+export const VENDOR_SCRIPT = fileURLToPath(new URL('../../vendor/gitswitch.sh', import.meta.url));
 
 /** Common install targets for the gitswitch binary. */
 export const SYSTEM_BIN_DIR = '/usr/local/bin';

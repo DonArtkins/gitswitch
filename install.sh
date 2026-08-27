@@ -30,7 +30,22 @@ done
 
 if [ ${#MISSING[@]} -gt 0 ]; then
     echo -e "${YELLOW}Installing: ${MISSING[*]}${RESET}"
-    sudo apt-get update -qq && sudo apt-get install -y "${MISSING[@]}"
+    # A single broken THIRD-PARTY repository must not abort the whole install
+    # (seen in the wild: Parrot OS writes its codename "echo" into docker.list,
+    #  which makes `apt-get update` exit non-zero on every machine).
+    if ! sudo apt-get update -qq; then
+        echo -e "${YELLOW}⚠️   apt-get update failed — a third-party apt source is misconfigured.${RESET}"
+        echo    "    Continuing with cached indexes…"
+        echo    "    Tip: check /etc/apt/sources.list.d/ for bad entries (e.g. a docker.list 'echo' suite)."
+    fi
+    if sudo apt-get install -y "${MISSING[@]}"; then
+        echo -e "${GREEN}✅  Dependencies installed.${RESET}"
+    else
+        echo -e "${RED}❌  Could not install required dependencies automatically.${RESET}"
+        echo    "    Install them manually, then re-run this installer:"
+        echo    "      sudo apt install ${MISSING[*]}"
+        exit 1
+    fi
 fi
 
 # Optional fzf
@@ -38,7 +53,8 @@ if ! command -v fzf &>/dev/null; then
     echo ""
     read -rp "Install fzf for better account selection? (recommended) (y/N): " INST_FZF
     if [[ "$INST_FZF" =~ ^[Yy]$ ]]; then
-        sudo apt-get install -y fzf
+        sudo apt-get install -y fzf \
+            || echo -e "${YELLOW}⚠️   fzf install failed — basic menus will be used. (sudo apt install fzf later)${RESET}"
     fi
 fi
 

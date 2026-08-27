@@ -33,7 +33,14 @@ async function runDepsSetup() {
       initialValue: true,
     });
     if (!p.isCancel(install) && install) {
-      await aptInstall(deps.missingCore);
+      try {
+        await aptInstall(deps.missingCore);
+      } catch (e) {
+        // Broken third-party apt repos, sudo declines, offline machines…
+        // None of these should kill the whole wizard with a stack trace.
+        p.log.warn(String(e.message || e));
+        p.log.message(pc.dim('Continuing — GitSwitch will surface anything essential again when the engine runs.'));
+      }
     } else {
       p.log.message(pc.dim('Skipping — GitSwitch needs these tools to function.'));
     }
@@ -44,7 +51,15 @@ async function runDepsSetup() {
       message: 'Install fzf for nicer account selection menus? (recommended)',
       initialValue: false,
     });
-    if (!p.isCancel(wantFzf) && wantFzf) await aptInstall(['fzf']);
+    if (!p.isCancel(wantFzf) && wantFzf) {
+      try {
+        await aptInstall(['fzf']);
+        p.log.success('fzf installed — nicer menus unlocked.');
+      } catch (e) {
+        p.log.warn(`fzf could not be installed automatically. Falling back to basic menus.`);
+        p.log.message(pc.dim(String(e.message || e)));
+      }
+    }
   }
 
   if (deps.missingCore.length === 0) {

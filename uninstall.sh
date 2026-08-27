@@ -32,9 +32,16 @@ else
     echo -e "${YELLOW}ℹ️   Account data kept at ~/.gitswitch/${RESET}"
 fi
 
-# Remove bashrc entry
-sed -i '/GitSwitch SSH Agent/,+2d' "$HOME/.bashrc" 2>/dev/null
-echo -e "${GREEN}✅  Removed SSH agent entry from ~/.bashrc${RESET}"
+# Remove bashrc entry.
+# IMPORTANT: delete from the marker through its closing `fi` (the auto-start
+# block is marker + if/eval/fi). The old ",+2d" range stopped one line early
+# and left an orphan `fi` in ~/.bashrc, which errors on every new shell.
+if grep -q "GitSwitch SSH Agent" "$HOME/.bashrc" 2>/dev/null; then
+    sed -i '/GitSwitch SSH Agent/,/^fi$/d' "$HOME/.bashrc"
+    echo -e "${GREEN}✅  Removed SSH agent entry from ~/.bashrc${RESET}"
+else
+    echo -e "${YELLOW}ℹ️   No GitSwitch SSH agent block found in ~/.bashrc${RESET}"
+fi
 
 echo ""
 echo -e "${GREEN}${BOLD}GitSwitch uninstalled successfully.${RESET}"

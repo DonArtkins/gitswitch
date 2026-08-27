@@ -12,9 +12,9 @@ import { VENDOR_SCRIPT, BINARY_NAME, DATA_DIR } from '../core/engine.js';
  */
 export async function installBinary(targetDir) {
   const dest = path.join(targetDir, BINARY_NAME);
-  fs.mkdirSync(targetDir, { recursive: true });
 
   try {
+    fs.mkdirSync(targetDir, { recursive: true });  // may itself need privileges
     fs.copyFileSync(VENDOR_SCRIPT, dest);
     fs.chmodSync(dest, 0o755);
     return { dest, usedSudo: false };
@@ -23,6 +23,7 @@ export async function installBinary(targetDir) {
   }
 
   // Permission denied → escalate with sudo (user already confirmed in the wizard)
+  await execa('sudo', ['mkdir', '-p', targetDir], { stdio: 'inherit' });
   await execa('sudo', ['install', '-m', '755', VENDOR_SCRIPT, dest], { stdio: 'inherit' });
   return { dest, usedSudo: true };
 }
@@ -78,5 +79,9 @@ export async function addSshAgentRc() {
  */
 export function prepareDataDirs() {
   fs.mkdirSync(path.join(DATA_DIR, 'backups'), { recursive: true });
-  fs.mkdirSync(path.join(os.homedir(), '.ssh'), { recursive: true, mode: 0o700 });
+  fs.mkdirSync(path.join(os.homedir(), '.ssh'), { recursive: true });
+  // Tokens live in plaintext inside accounts.json and keys inside ~/.ssh:
+  // enforce strict permissions even if the directories already existed.
+  try { fs.chmodSync(DATA_DIR, 0o700); } catch { /* best effort */ }
+  try { fs.chmodSync(path.join(os.homedir(), '.ssh'), 0o700); } catch { /* best effort */ }
 }
