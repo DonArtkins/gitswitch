@@ -7,10 +7,22 @@ import { VENDOR_SCRIPT, BINARY_NAME, DATA_DIR } from '../core/engine.js';
 /**
  * Copy the bundled engine to the target bin dir.
  * Tries a direct copy first; falls back to sudo when permission is denied.
+ *
+ * CRITICAL: clack's spinner puts stdin into raw mode (`ISIG` off), which means
+ * Ctrl+C / Ctrl+Z are delivered as raw bytes instead of real signals. That
+ * made an interactive `sudo` run *under a spinner* appear permanently stuck —
+ * the password prompt could not be read and nothing could interrupt it. So we
+ * stop the spinner FIRST, restoring canonical terminal mode, then prompt for
+ * sudo's password on a clean, interruptible terminal.
+ *
  * @param {string} targetDir e.g. /usr/local/bin or ~/.local/bin
+ * @param {{spinner?: object, sudo?: Function}} opts
+ *   `spinner` — a live @clack/prompts spinner; stopped before an interactive
+ *   sudo prompt so the terminal returns to canonical (signal-capable) mode.
+ *   `sudo` — test seam for the command runner (defaults to execa).
  * @returns {Promise<{dest: string, usedSudo: boolean}>}
  */
-export async function installBinary(targetDir) {
+export async function installBinary(targetDir, { spinner, sudo = execa } = {}) {
   const dest = path.join(targetDir, BINARY_NAME);
 
   try {
@@ -22,9 +34,21 @@ export async function installBinary(targetDir) {
     if (!['EACCES', 'EPERM'].includes(err.code)) throw err;
   }
 
-  // Permission denied → escalate with sudo (user already confirmed in the wizard)
-  await execa('sudo', ['mkdir', '-p', targetDir], { stdio: 'inherit' });
-  await execa('sudo', ['install', '-m', '755', VENDOR_SCRIPT, dest], { stdio: 'inherit' });
+  // Permission denied → escalate. Release the spinner/terminal FIRST so the
+  // sudo password prompt is visible and Ctrl+C / Ctrl+Z actually terminate.
+  if (spinner && typeof spinner.stop === 'function') {
+    try { spinner.stop(''); } catch { /* already stopped — ignore */ }
+  }
+
+  try {
+    await sudo('sudo', ['mkdir', '-p', targetDir], { stdio: 'inherit' });
+    await sudo('sudo', ['install', '-m', '755', VENDOR_SCRIPT, dest], { stdio: 'inherit' });
+  } catch (e) {
+    throw new Error(
+      'The engine could not be installed because sudo was declined or failed.\n' +
+      `Install it yourself with:\n  sudo install -m 755 "${VENDOR_SCRIPT}" "${dest}"`,
+    );
+  }
   return { dest, usedSudo: true };
 }
 

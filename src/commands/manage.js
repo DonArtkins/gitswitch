@@ -74,9 +74,20 @@ export async function runUninstallWizard() {
     const removeBin = await p.confirm({ message: `Remove the gitswitch command (${binary})?`, initialValue: true });
     if (!p.isCancel(removeBin) && removeBin) {
       try {
-        await execa('sudo', ['rm', '-f', binary], { stdio: 'inherit' });
+        // Try a direct removal first (user-local installs, writable dirs).
+        fs.rmSync(binary, { force: true });
         removedBin = true;
-      } catch { /* sudo declined */ }
+      } catch {
+        // Root-owned dir → escalate via sudo. Run with the terminal in normal
+        // mode (we are past the clack prompt), so the password prompt is
+        // usable and Ctrl+C interrupts cleanly. A decline just falls through.
+        try {
+          await execa('sudo', ['rm', '-f', binary], { stdio: 'inherit' });
+          removedBin = true;
+        } catch {
+          p.log.warn(`Could not remove ${binary} — you may need to run it manually:\n  sudo rm -f "${binary}"`);
+        }
+      }
     }
   }
 

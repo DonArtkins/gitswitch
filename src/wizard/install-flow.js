@@ -86,7 +86,7 @@ async function freshInstallFlow() {
   const s = p.spinner();
   s.start('Installing GitSwitch engine…');
   try {
-    const { dest, usedSudo } = await installBinary(location === 'system' ? SYSTEM_BIN_DIR : USER_BIN_DIR);
+    const { dest, usedSudo } = await installBinary(location === 'system' ? SYSTEM_BIN_DIR : USER_BIN_DIR, { spinner: s });
     s.stop(`Engine installed → ${pc.cyan(dest)}${usedSudo ? pc.dim(' (via sudo)') : ''}`);
 
     if (location === 'user') {
@@ -126,8 +126,11 @@ async function updateFlow(binaryPath, currentVersion) {
   s.start('Updating GitSwitch engine…');
   try {
     const destDir = binaryPath.includes(SYSTEM_BIN_DIR) ? SYSTEM_BIN_DIR : USER_BIN_DIR;
-    const { dest } = await installBinary(destDir);
-    s.stop(`Updated → ${pc.cyan(dest)}`);
+    // `installBinary` stops the spinner itself right before any interactive
+    // sudo prompt, so Ctrl+C / password entry work — then we stop it again
+    // here (idempotent) to print the completed state.
+    const { dest, usedSudo } = await installBinary(destDir, { spinner: s });
+    s.stop(`Updated → ${pc.cyan(dest)}${usedSudo ? pc.dim(' (via sudo)') : ''}`);
     p.log.success(
       fs.existsSync(DATA_DIR)
         ? `Your accounts (${pc.cyan('~/.gitswitch')}), SSH keys and SSH config entries were ${pc.bold('preserved')}.`
@@ -183,8 +186,13 @@ export async function runWizard() {
       const s = p.spinner();
       s.start('Reinstalling engine…');
       const destDir = binary.includes(SYSTEM_BIN_DIR) ? SYSTEM_BIN_DIR : USER_BIN_DIR;
-      await installBinary(destDir);
-      s.stop('Engine repaired. All data untouched.');
+      try {
+        await installBinary(destDir, { spinner: s });
+        s.stop('Engine repaired. All data untouched.');
+      } catch (e) {
+        s.stop(pc.red(`Repair failed: ${e.message}`));
+        process.exit(1);
+      }
       p.outro(pc.green('Done!'));
       return;
     }

@@ -1,6 +1,6 @@
 {
   "name": "gitswitch-wizard",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "GitSwitch Wizard — multi-GitHub account manager installer & updater. Installs, updates and manages GitSwitch without touching SSH configs it doesn't own.",
   "type": "module",
   "main": "src/cli.js",

@@ -154,7 +154,7 @@ Run `gitswitch` from any terminal:
 
 ```
   ╔══════════════════════════════════════════╗
-  ║   Multi-GitHub Account Manager v2.1.0    ║
+  ║   Multi-GitHub Account Manager v2.1.2    ║
   ╚══════════════════════════════════════════╝
 
   Accounts configured: 2

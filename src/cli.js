@@ -8,6 +8,27 @@ import { runEngine } from './core/engine.js';
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
 
+/**
+ * Terminal safety net for Ctrl+C / Ctrl+Z / SIGTERM.
+ *
+ * When GitSwitch runs an interactive child (e.g. a `sudo` password prompt) the
+ * terminal is in canonical mode, so these keys arrive as *real signals*. This
+ * handler restores the cursor and exits immediately instead of leaving the
+ * user stuck on a frozen spinner. Inside @clack/prompts raw-mode prompts these
+ * signals are never generated (clack cancels via keypress), so this never
+ * interferes with the normal cancel flow.
+ */
+function terminateAndRestore(signal, code) {
+  // Show the cursor & move to a fresh line before dying (spinner may have hidden it).
+  try {
+    if (process.stdout.isTTY) process.stdout.write('\x1b[?25h\n\r');
+  } catch { /* best effort */ }
+  process.exit(code);
+}
+if (process.platform !== 'win32') process.on('SIGTSTP', () => terminateAndRestore('SIGTSTP', 130)); // Ctrl+Z
+process.on('SIGINT', () => terminateAndRestore('SIGINT', 130));  // Ctrl+C
+process.on('SIGTERM', () => terminateAndRestore('SIGTERM', 143));
+
 /** Commands forwarded straight to the GitSwitch bash engine. */
 const ENGINE_COMMANDS = ['whoami', 'active', 'list', 'accounts', 'version', '--version', '-v', 'help', '-h'];
 
