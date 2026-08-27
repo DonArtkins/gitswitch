@@ -6,6 +6,37 @@
 
 ---
 
+## 🚀 Install (global — run from anywhere)
+
+**One command, installed globally so `gitswitch` works from any directory on your machine:**
+
+```bash
+npm install -g gitswitch-wizard
+```
+
+The `-g` global flag puts the `gitswitch` binary on your system PATH (e.g. `/usr/local/bin/gitswitch` or `~/.local/bin`), so you can call it from **any folder and any terminal** — no `cd` into a project, no `npx` prefix:
+
+```bash
+gitswitch            # open the interactive menu
+gitswitch whoami     # see your active account
+gitswitch doctor     # health-check your install
+gitswitch uninstall  # remove it (asks before deleting anything)
+```
+
+> 💡 Already installed? The global command is also the upgrade path — npm's **global** install gracefully installs the latest version while preserving all of your accounts, SSH keys and SSH config:
+>
+> ```bash
+> npm install -g gitswitch-wizard@latest
+> ```
+
+> 🧰 Prefer a zero-install, inspect-only run (no permanent install)? Use the wizard directly:
+>
+> ```bash
+> npx gitswitch-wizard
+> ```
+
+---
+
 ## ✨ What's New in v2.1 (npm wizard release)
 
 | Feature | Details |
@@ -51,47 +82,22 @@
 
 ---
 
-## 🚀 Installation
+## 🔍 Also available: classic shell installer
 
-### ⚡ Option A — via npm (recommended)
-
-Zero-install wizard via npx — it detects your setup first:
+Prefer to skip npm? The source installer also places `gitswitch` **globally on your PATH**, so it's reachable from anywhere:
 
 ```bash
-npx gitswitch-wizard
-```
-
-The wizard will:
-- **Already installed?** → detect the version and **update in place**, preserving `~/.gitswitch` data, SSH keys and SSH config entries
-- **Not installed?** → guided install: dependency check, system-wide (`/usr/local/bin`) or user-local (`~/.local/bin`) placement, optional SSH-agent persistence
-
-Other commands:
-
-```bash
-gitswitch doctor     # diagnose installation, accounts & SSH config health
-gitswitch uninstall  # remove GitSwitch (asks before deleting anything)
-```
-
-Or install permanently from npm:
-
-```bash
-npm install -g gitswitch-wizard
-```
-
-### 🔧 Option B — classic shell installer
-
-```bash
-# 1. Clone or copy the gitswitch folder to your machine
+# Clone or copy the gitswitch folder to your machine
 git clone https://github.com/DonArtkins/gitswitch.git
 cd gitswitch
 
-# 2. Make scripts executable
+# Make scripts executable
 chmod +x install.sh uninstall.sh gitswitch.sh
 
-# 3. Run the installer (installs dependencies automatically)
+# Run the installer (also installs dependencies automatically → global install)
 ./install.sh
 
-# 4. Start the tool from anywhere
+# Start the tool — from anywhere, like the npm version
 gitswitch
 ```
 
@@ -114,7 +120,7 @@ Existing hosts, keys and settings are left byte-for-byte untouched.
 ```
 gitswitch/                  ← Project folder (keep this)
 ├── gitswitch.sh            ← Bash engine (source of truth)
-├── install.sh              ← Classic installer (Option B)
+├── install.sh              ← Classic shell installer
 ├── uninstall.sh            ← Classic uninstaller
 ├── package.json            ← npm package manifest (gitswitch-wizard)
 ├── bin/gitswitch.js        ← npx entry point
