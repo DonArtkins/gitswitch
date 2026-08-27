@@ -37,6 +37,16 @@ gitswitch uninstall  # remove it (asks before deleting anything)
 
 ---
 
+## ✨ v2.1.3 — update & version-alignment fixes
+
+| Feature | Details |
+|---|---|
+| 🧙 **Unbreakable wizard updates** | The `sudo` prompt during install/update is now interactive & interruptible — no more "update never finishes" with a frozen spinner |
+| ⌨️ **Ctrl+C / Ctrl+Z / Ctrl+X work** | A terminal signal safety net restores the cursor and exits cleanly instead of hanging |
+| 🔧 **Uninstall hardening** | Removes user-local binaries directly; only escalates to sudo when actually needed |
+| 🔄 **Version convergence** | Engine + npm package kept in lockstep so the wizard stops nagging to update every run |
+| 📖 **Docs** | New troubleshooting guide: `gitswitch version` lagging behind npm, and how to resync the system engine |
+
 ## ✨ What's New in v2.1 (npm wizard release)
 
 | Feature | Details |
@@ -154,7 +164,7 @@ Run `gitswitch` from any terminal:
 
 ```
   ╔══════════════════════════════════════════╗
-  ║   Multi-GitHub Account Manager v2.1.2    ║
+  ║   Multi-GitHub Account Manager v2.1.3    ║
   ╚══════════════════════════════════════════╝
 
   Accounts configured: 2
@@ -325,6 +335,49 @@ chmod 600 ~/.ssh/config
 ```bash
 cat ~/.ssh/config
 ```
+
+### `gitswitch version` reports an older version than npm
+
+GitSwitch uses a **two-layer design**, so there are two different `gitswitch`
+binaries on disk:
+
+| **Binary** | **What it is** | **Version it reports** |
+|---|---|---|
+| **npm wrapper** | the Node.js CLI (`gitswitch-wizard` → `bin/gitswitch.js`) | the npm package version |
+| **system engine** | the Bash engine installed at `/usr/local/bin/gitswitch` | `gitswitch version` |
+
+The node wrapper is usually first on your `PATH`, but `gitswitch version` is
+**forwarded to the system engine**. That root-owned file is refreshed only when
+a wizard update actually completes. If an update is interrupted (or the legacy
+version of the wizard couldn't reach an interactive `sudo` prompt), the engine
+is left behind even though the npm package updated.
+
+**Diagnose the mismatch:**
+```bash
+gitswitch version                    # engine version (may lag)
+npm view gitswitch-wizard version    # npm package version
+ls -la /usr/local/bin/gitswitch      # engine path + timestamp
+grep -n GS_VERSION /usr/local/bin/gitswitch
+```
+
+**Fix it (one-time):** run the wizard and **accept** the update — the `[sudo]`
+prompt is now interactive and usable:
+```bash
+gitswitch
+```
+…or refresh straight from the npm package:
+```bash
+sudo install -m 755 \
+  "$(npm prefix -g)/lib/node_modules/gitswitch-wizard/vendor/gitswitch.sh" \
+  /usr/local/bin/gitswitch
+```
+Then confirm they agree:
+```bash
+gitswitch version    # now matches npm
+```
+
+> 💡 This is a one-time migration step after an interrupted update. Future
+> updates refresh the engine automatically.
 
 ---
 
