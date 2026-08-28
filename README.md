@@ -17,10 +17,14 @@ npm install -g gitswitch-wizard
 The `-g` global flag puts the `gitswitch` binary on your system PATH (e.g. `/usr/local/bin/gitswitch` or `~/.local/bin`), so you can call it from **any folder and any terminal** — no `cd` into a project, no `npx` prefix:
 
 ```bash
-gitswitch            # open the interactive menu
+gitswitch            # open the interactive wizard (self-update check → install/repair → menu)
 gitswitch whoami     # see your active account
+gitswitch list       # list stored accounts
+gitswitch use <name> # switch to an account
 gitswitch doctor     # health-check your install
-gitswitch uninstall  # remove it (asks before deleting anything)
+gitswitch upgrade    # check for & install the latest npm version
+gitswitch repair     # re-install the engine binary (fixes a broken install)
+gitswitch uninstall  # remove it entirely (incl. the npm package)
 ```
 
 > 💡 Already installed? The global command is also the upgrade path — npm's **global** install gracefully installs the latest version while preserving all of your accounts, SSH keys and SSH config:
@@ -46,6 +50,8 @@ gitswitch uninstall  # remove it (asks before deleting anything)
 | 🔧 **Uninstall hardening** | Removes user-local binaries directly; only escalates to sudo when actually needed |
 | 🔄 **Version convergence** | Engine + npm package kept in lockstep so the wizard stops nagging to update every run |
 | 📖 **Docs** | New troubleshooting guide: `gitswitch version` lagging behind npm, and how to resync the system engine |
+| 🔁 **Self-manage (v2.2+)** | `gitswitch upgrade` / `gitswitch repair`; the wizard auto-checks for npm updates on launch |
+| 🗑 **Complete uninstall (v2.2+)** | Removes the engine binary AND the `gitswitch-wizard` npm package, and strips leftover PATH / SSH-agent markers from `~/.bashrc` / `~/.zshrc` — after which `gitswitch` gives a normal `command not found` |
 
 ## ✨ What's New in v2.1 (npm wizard release)
 
