@@ -2,7 +2,7 @@ import { defineCommand, runMain } from 'citty';
 import pc from 'picocolors';
 import { createRequire } from 'node:module';
 import { runWizard } from './wizard/install-flow.js';
-import { runDoctor, runUninstallWizard } from './commands/manage.js';
+import { runDoctor, runUninstallWizard, runSelfUpgrade, runRepair } from './commands/manage.js';
 import { runEngine } from './core/engine.js';
 
 const require = createRequire(import.meta.url);
@@ -78,6 +78,12 @@ const main = defineCommand({
         return runWizard();
       case 'doctor':
         return runDoctor();
+      case 'upgrade':
+      case 'self-update':
+      case 'selfupdate':
+        return runSelfUpgrade();
+      case 'repair':
+        return runRepair();
       case 'uninstall':
         return runUninstallWizard();
       case 'use':

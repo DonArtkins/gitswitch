@@ -9,10 +9,15 @@ import {
   ACCOUNTS_FILE,
   ACTIVE_FILE,
   SSH_CONFIG,
+  SYSTEM_BIN_DIR,
+  USER_BIN_DIR,
+  DATA_DIR,
 } from '../core/engine.js';
 import { inspectSshConfig, stripManagedBlocks } from '../core/ssh-config.js';
 import { checkDependencies, formatMissing } from '../installer/deps.js';
+import { installBinary } from '../installer/installer.js';
 import { VENDOR_SCRIPT } from '../core/engine.js';
+import { checkForUpdate, promptSelfUpdate, selfUninstall } from '../lib/self.js';
 
 function readJsonSafe(file) {
   try {
@@ -57,6 +62,36 @@ export async function runDoctor() {
 
   const deps = await checkDependencies();
   console.log(`  Deps     : ${deps.missingCore.length === 0 ? pc.green('all required present') : formatMissing(deps)}\n`);
+}
+
+/** `gitswitch upgrade` — self-update the npm CLI if a newer version is published. */
+export async function runSelfUpgrade() {
+  const { outdated, latest, current } = await checkForUpdate();
+  if (!outdated) {
+    console.log(pc.green(`Already on the latest version (v${current}).`));
+    return;
+  }
+  console.log(`Available: ${pc.cyan('v' + latest)}  (you have ${pc.dim('v' + current)})`);
+  await promptSelfUpdate();
+}
+
+/** `gitswitch repair` — re-install the engine binary (fixes a broken install). */
+export async function runRepair() {
+  console.log(pc.bold('\n🔧 GitSwitch Repair\n'));
+  const binary = findInstalledBinary();
+  const targetDir = binary?.includes(SYSTEM_BIN_DIR) ? SYSTEM_BIN_DIR : USER_BIN_DIR;
+  try {
+    await installBinary(targetDir);
+    const dest = findInstalledBinary() ?? path.join(targetDir, 'gitswitch');
+    console.log(`  Engine   : ${pc.cyan(dest)}`);
+    console.log('  Status   : ' + pc.green('re-installed & ready'));
+    console.log(`  Data     : ${fs.existsSync(DATA_DIR) ? pc.green('accounts preserved') : pc.dim('no account data')}`);
+    console.log();
+  } catch (e) {
+    console.log('  Status   : ' + pc.red('repair failed — ' + (e.message || e)));
+    console.log();
+    process.exitCode = 1;
+  }
 }
 
 /**
@@ -123,7 +158,10 @@ export async function runUninstallWizard() {
     p.log.message(pc.dim('No GitSwitch-managed SSH config entries found.'));
   }
 
+  // Remove the npm package so the `gitswitch` command actually disappears.
+  const npmRemoved = await selfUninstall();
+
   p.outro(pc.green(
-    `Uninstalled.${removedBin ? ' Binary removed.' : ''}${removedData ? ' Account data deleted.' : ' Account data kept at ~/.gitswitch.'}`,
+    `Uninstalled.${removedBin ? ' Binary removed.' : ''}${removedData ? ' Account data deleted.' : ' Account data kept at ~/.gitswitch.'} ${npmRemoved ? 'gitswitch npm package removed — command no longer available.' : 'gitswitch npm package kept.'}`,
   ));
 }

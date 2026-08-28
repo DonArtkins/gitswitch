@@ -156,6 +156,11 @@ export async function runWizard() {
     p.log.warn('GitSwitch officially supports Linux. Continuing anyway, but YMMV on other platforms.');
   }
 
+  // Self-check: offer an update if a newer npm version is published.
+  const { checkForUpdate, promptSelfUpdate } = await import('../lib/self.js');
+  const { outdated } = await checkForUpdate();
+  if (outdated) await promptSelfUpdate();
+
   const binary = findInstalledBinary();
   const hasData = fs.existsSync(DATA_DIR);
 
