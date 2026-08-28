@@ -43,6 +43,15 @@ gitswitch help       # show all commands (flags: -h, --help)
 
 ---
 
+## ✨ v2.2.3 — complete uninstall
+
+| Feature | Details |
+|---|---|
+| 🗑️ **Uninstall removes EVERYTHING** | `gitswitch uninstall` now removes the engine binary from **every** known location (`/usr/local/bin` AND `~/.local/bin`), deletes **ALL** accounts & backups (`~/.gitswitch`), strips GitSwitch-managed SSH config blocks (with a timestamped backup), removes the `gitswitch-wizard` npm package and every PATH / SSH-agent marker |
+| ✅ **`command not found` guaranteed** | After uninstall, `gitswitch` exists nowhere on PATH — typing it returns `bash: gitswitch: command not found`, exactly like any tool you never installed |
+| 🔒 **One confirmation** | A single confirmation covers the whole removal (accounts, SSH entries, binary, npm package — no piecemeal prompts) |
+| 🩹 **Regression-tested** | `removeBinary` (direct + sudo fallback across both bin dirs) is covered by tests |
+
 ## ✨ v2.2.2 — uninstall crash hotfix
 
 | Feature | Details |
@@ -479,7 +488,7 @@ Choose whether to keep or delete your stored accounts.
 | `gitswitch whoami` | Show the currently active account |
 | `gitswitch list` | List stored accounts |
 | `gitswitch doctor` | Diagnose installation, accounts, SSH config & dependencies |
-| `gitswitch uninstall` | Uninstall — asks before deleting anything |
+| `gitswitch uninstall` | Remove everything — accounts, SSH entries, binary, npm package & rc markers |
 | `gitswitch version` | Print the installed version (npm package; falls back to engine under `npx`) |
 
 ---

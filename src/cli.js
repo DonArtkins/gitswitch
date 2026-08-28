@@ -59,7 +59,7 @@ ${pc.bold('Usage:')}
   gitswitch doctor             Diagnose installation & environment
   gitswitch upgrade            Check for & install the latest npm version
   gitswitch repair             Re-install the engine binary (fixes broken install)
-  gitswitch uninstall          Uninstall entirely (asks before deleting anything)
+  gitswitch uninstall          Remove everything (accounts, SSH entries, binary, npm package)
   gitswitch version            Print the version
   gitswitch help               Show this help
 `);

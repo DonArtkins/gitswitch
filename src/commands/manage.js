@@ -12,6 +12,7 @@ import {
   SYSTEM_BIN_DIR,
   USER_BIN_DIR,
   DATA_DIR,
+  BINARY_NAME,
 } from '../core/engine.js';
 import { inspectSshConfig, stripManagedBlocks } from '../core/ssh-config.js';
 import { checkDependencies, formatMissing } from '../installer/deps.js';
@@ -95,76 +96,93 @@ export async function runRepair() {
 }
 
 /**
- * `gitswitch uninstall` wizard — every destructive step is opt-in and asked first.
+ * Remove a gitswitch engine binary, trying a direct `rm` first and escalating
+ * to sudo when the target is root-owned. Runs with the terminal in normal mode
+ * (we are past the clack prompt), so the password prompt is usable and Ctrl+C
+ * interrupts cleanly. A decline just falls through.
+ * @param {string} binaryPath absolute path to the engine binary
+ * @param {{sudo?: Function}} [opts] test seam for the sudo runner
+ * @returns {Promise<boolean>} true when the binary no longer exists
+ */
+export async function removeBinary(binaryPath, { sudo = execa } = {}) {
+  try {
+    fs.rmSync(binaryPath, { force: true });
+    return !fs.existsSync(binaryPath);
+  } catch {
+    try {
+      await sudo('sudo', ['rm', '-f', binaryPath], { stdio: 'inherit' });
+      return !fs.existsSync(binaryPath);
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * `gitswitch uninstall` wizard — removes EVERY trace so `gitswitch` afterwards
+ * reports `command not found`: engine binaries in every known location, all
+ * account data, GitSwitch-managed SSH blocks, the npm package and rc markers.
  */
 export async function runUninstallWizard() {
   p.intro(pc.bgRed(pc.black(' GitSwitch Uninstaller ')));
 
   const binary = findInstalledBinary();
-  if (!binary) p.log.info('No installed gitswitch binary found.');
+  if (binary) p.note(binary, 'Installed engine detected');
 
-  // 1. Remove the binary?
-  let removedBin = false;
-  if (binary) {
-    const removeBin = await p.confirm({ message: `Remove the gitswitch command (${binary})?`, initialValue: true });
-    if (!p.isCancel(removeBin) && removeBin) {
-      try {
-        // Try a direct removal first (user-local installs, writable dirs).
-        fs.rmSync(binary, { force: true });
-        removedBin = true;
-      } catch {
-        // Root-owned dir → escalate via sudo. Run with the terminal in normal
-        // mode (we are past the clack prompt), so the password prompt is
-        // usable and Ctrl+C interrupts cleanly. A decline just falls through.
-        try {
-          await execa('sudo', ['rm', '-f', binary], { stdio: 'inherit' });
-          removedBin = true;
-        } catch {
-          p.log.warn(`Could not remove ${binary} — you may need to run it manually:\n  sudo rm -f "${binary}"`);
-        }
-      }
-    }
+  const confirm = await p.confirm({
+    message: 'Uninstall GitSwitch completely? This removes the engine binary, ALL stored accounts & backups (~/.gitswitch), GitSwitch-managed SSH config entries, the gitswitch-wizard npm package and every rc marker.',
+    initialValue: true,
+  });
+  if (p.isCancel(confirm)) { p.cancel('Aborted.'); process.exit(0); }
+  if (!confirm) { p.outro('Nothing was removed.'); return; }
+
+  // 1. Remove the engine binary from EVERY known location (system + user).
+  let removedBins = 0;
+  for (const dir of [SYSTEM_BIN_DIR, USER_BIN_DIR]) {
+    const candidate = path.join(dir, BINARY_NAME);
+    if (!fs.existsSync(candidate)) continue;
+    if (await removeBinary(candidate)) removedBins++;
+    else p.log.warn(`Could not remove ${candidate} — run: sudo rm -f "${candidate}"`);
   }
 
-  // 2. Remove account data?
-  let removedData = false;
-  const hasData = fs.existsSync(path.join(os.homedir(), '.gitswitch'));
-  if (hasData) {
-    const removeData = await p.confirm({
-      message: 'Delete ALL stored accounts & backups (~/.gitswitch)?',
-      initialValue: false,
-    });
-    if (!p.isCancel(removeData) && removeData) {
-      fs.rmSync(path.join(os.homedir(), '.gitswitch'), { recursive: true, force: true });
-      removedData = true;
-    }
-  }
+  // 2. Delete ALL stored accounts & backups.
+  const dataGone = deleteData();
+  if (dataGone) p.log.success('Removed all accounts & backups (~/.gitswitch).');
 
-  // 3. Remove only GitSwitch-managed SSH config entries? Foreign hosts are never touched.
+  // 3. Remove only GitSwitch-managed SSH config entries (foreign hosts untouched),
+  //    with a timestamped backup so nothing is lost irreversibly.
   const ssh = inspectSshConfig();
   if (ssh.exists && ssh.managedUsers.length > 0) {
-    const cleanSsh = await p.confirm({
-      message: `Remove GitSwitch's own SSH config blocks for: ${ssh.managedUsers.join(', ')}?`,
-      initialValue: false,
-    });
-    if (!p.isCancel(cleanSsh) && cleanSsh) {
-      const backup = `${SSH_CONFIG}.gitswitch-backup-${Date.now()}`;
-      const content = fs.readFileSync(SSH_CONFIG, 'utf8');
-      fs.writeFileSync(backup, content);
-      fs.writeFileSync(SSH_CONFIG, stripManagedBlocks(content, ssh.managedUsers));
-      p.log.success(`Backup written → ${backup}`);
-    }
+    const backup = `${SSH_CONFIG}.gitswitch-backup-${Date.now()}`;
+    const content = fs.readFileSync(SSH_CONFIG, 'utf8');
+    fs.writeFileSync(backup, content);
+    fs.writeFileSync(SSH_CONFIG, stripManagedBlocks(content, ssh.managedUsers));
+    p.log.success(`Removed GitSwitch-managed SSH entries for: ${ssh.managedUsers.join(', ')} (backup → ${backup}).`);
   } else {
     p.log.message(pc.dim('No GitSwitch-managed SSH config entries found.'));
   }
 
-  // Remove the npm package so the `gitswitch` command actually disappears.
+  // 4. Remove the npm package so the `gitswitch` command truly disappears.
   const npmRemoved = await selfUninstall();
 
-  // Remove leftover PATH / SSH-agent markers from ~/.bashrc / ~/.zshrc.
+  // 5. Remove leftover PATH / SSH-agent markers from ~/.bashrc / ~/.zshrc.
   await cleanRcMarkers();
 
   p.outro(pc.green(
-    `Uninstalled.${removedBin ? ' Binary removed.' : ''}${removedData ? ' Account data deleted.' : ' Account data kept at ~/.gitswitch.'} ${npmRemoved ? 'gitswitch npm package removed — command no longer available.' : 'gitswitch npm package kept.'}`,
+    `Uninstalled.${removedBins ? ` ${removedBins} engine binary(ies) removed.` : ''} Account data ${dataGone ? 'deleted.' : 'could not be deleted — run: rm -rf ~/.gitswitch'} ${npmRemoved ? 'gitswitch-wizard npm package removed — the gitswitch command is gone.' : 'gitswitch-wizard npm package could not be removed automatically — run: npm uninstall -g gitswitch-wizard'}`,
   ));
+  p.log.message(pc.dim('After uninstall, `gitswitch` reports: bash: gitswitch: command not found'));
+}
+
+/**
+ * Delete ~/.gitswitch (accounts, backups, active pointer).
+ * @returns {boolean} true when the data dir no longer exists
+ */
+function deleteData() {
+  try {
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    return !fs.existsSync(DATA_DIR);
+  } catch {
+    return false;
+  }
 }
