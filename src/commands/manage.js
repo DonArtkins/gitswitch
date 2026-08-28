@@ -17,7 +17,7 @@ import { inspectSshConfig, stripManagedBlocks } from '../core/ssh-config.js';
 import { checkDependencies, formatMissing } from '../installer/deps.js';
 import { installBinary } from '../installer/installer.js';
 import { VENDOR_SCRIPT } from '../core/engine.js';
-import { checkForUpdate, promptSelfUpdate, selfUninstall } from '../lib/self.js';
+import { checkForUpdate, promptSelfUpdate, selfUninstall, cleanRcMarkers } from '../lib/self.js';
 
 function readJsonSafe(file) {
   try {
@@ -160,6 +160,9 @@ export async function runUninstallWizard() {
 
   // Remove the npm package so the `gitswitch` command actually disappears.
   const npmRemoved = await selfUninstall();
+
+  // Remove leftover PATH / SSH-agent markers from ~/.bashrc / ~/.zshrc.
+  await cleanRcMarkers();
 
   p.outro(pc.green(
     `Uninstalled.${removedBin ? ' Binary removed.' : ''}${removedData ? ' Account data deleted.' : ' Account data kept at ~/.gitswitch.'} ${npmRemoved ? 'gitswitch npm package removed — command no longer available.' : 'gitswitch npm package kept.'}`,

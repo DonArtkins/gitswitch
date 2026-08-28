@@ -30,6 +30,44 @@ export async function getLatestVersion() {
   }
 }
 
+/**
+ * Remove leftover gitswitch markers from ~/.bashrc / ~/.zshrc so uninstall
+ * leaves zero traces in shell startup files:
+ *   - the `# gitswitch-wizard PATH` + follow-up `export PATH=` line
+ *   - the `# GitSwitch SSH Agent — auto-start` block (through its closing `fi`)
+ */
+export async function cleanRcMarkers() {
+  const os = require('node:os');
+  const fs = require('node:fs');
+  const rcs = ['.bashrc', '.zshrc'].map((f) => path.join(os.homedir(), f));
+  const pathMarker = '# gitswitch-wizard PATH';
+  const sshMarker = 'GitSwitch SSH Agent';
+  for (const rc of rcs) {
+    try {
+      if (!fs.existsSync(rc)) continue;
+      const lines = fs.readFileSync(rc, 'utf8').split('\n');
+      const out = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.includes(pathMarker)) {
+          if (lines[i + 1] && /^\s*export PATH=/.test(lines[i + 1])) i++;
+          continue;
+        }
+        if (line.includes(sshMarker)) {
+          // Skip lines until the closing `fi` of the SSH-agent block.
+          if (lines[i + 1] && /^\s*if /.test(lines[i + 1])) {
+            while (i < lines.length && !/^\s*fi\b/.test(lines[i])) i++;
+            i++; // skip the `fi`
+          }
+          continue;
+        }
+        out.push(line);
+      }
+      fs.writeFileSync(rc, out.join('\n'));
+    } catch { /* rc not writable — skip */ }
+  }
+}
+
 /** Compare the running local version to the latest published one. */
 export async function checkForUpdate() {
   const latest = await getLatestVersion();
