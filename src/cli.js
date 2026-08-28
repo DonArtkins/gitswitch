@@ -2,7 +2,7 @@ import { defineCommand, runMain } from 'citty';
 import pc from 'picocolors';
 import { createRequire } from 'node:module';
 import { runWizard } from './wizard/install-flow.js';
-import { runDoctor, runUninstallWizard, runSelfUpgrade, runRepair } from './commands/manage.js';
+import { runDoctor, runUninstallWizard, runSelfUpgrade, runRepair, runFullUpdate } from './commands/manage.js';
 import { runEngine } from './core/engine.js';
 
 const require = createRequire(import.meta.url);
@@ -50,12 +50,14 @@ function printUsage() {
 ${pc.bold('gitswitch')} ${pc.dim(`v${pkg.version}`)} — multi-GitHub account manager
 
 ${pc.bold('Usage:')}
-  gitswitch                    Run the install / update wizard
+  gitswitch                    Run the install / repair wizard
   gitswitch use <account>      ⭐ Set the active account (quick switch)
   gitswitch switch <account>   Alias for \`use\`
   gitswitch whoami             Show the currently active account
   gitswitch status             Same as \`whoami\`
   gitswitch list               List stored accounts
+  gitswitch install            Run the install / repair wizard
+  gitswitch update             Update fully from npm (CLI first, then engine)
   gitswitch doctor             Diagnose installation & environment
   gitswitch upgrade            Check for & install the latest npm version
   gitswitch repair             Re-install the engine binary (fixes broken install)
@@ -87,8 +89,10 @@ const main = defineCommand({
     switch (cmd) {
       case 'wizard':
       case 'install':
-      case 'update':
         return runWizard();
+      case 'update':
+        // Full update: pull the latest CLI from npm, then update the engine.
+        return runFullUpdate();
       case 'doctor':
         return runDoctor();
       case 'upgrade':

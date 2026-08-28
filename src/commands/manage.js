@@ -76,6 +76,26 @@ export async function runSelfUpgrade() {
   await promptSelfUpdate();
 }
 
+/**
+ * `gitswitch update` — bring the install FULLY up to date like theamify:
+ *   1. Pull the latest npm CLI from the registry (prompts, defaults to yes).
+ *   2. Then run the wizard, which updates the engine binary in place if needed.
+ * So a plain `gitswitch update` is enough — no manual `npm install -g` needed.
+ */
+export async function runFullUpdate() {
+  const { outdated, latest, current } = await checkForUpdate();
+  if (outdated) {
+    console.log(pc.cyan(`A newer version (v${latest}) is published — you have v${current}.`));
+    const updated = await promptSelfUpdate();
+    if (updated) {
+      console.log(pc.yellow('Bye! 👋  ──  The gitswitch CLI was just updated. Re-run `gitswitch update` once more (or just run `gitswitch`) to finish updating the engine.'));
+      return;
+    }
+  }
+  const { runWizard } = await import('../wizard/install-flow.js');
+  await runWizard();
+}
+
 /** `gitswitch repair` — re-install the engine binary (fixes a broken install). */
 export async function runRepair() {
   console.log(pc.bold('\n🔧 GitSwitch Repair\n'));

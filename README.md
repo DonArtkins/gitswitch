@@ -21,13 +21,21 @@ gitswitch            # open the interactive wizard (self-update check → instal
 gitswitch use <name> # switch to an account (alias: switch)
 gitswitch whoami     # see your active account (aliases: active, status)
 gitswitch list       # list stored accounts (alias: accounts)
+gitswitch install    # run the install / repair wizard
+gitswitch update     # update fully from npm (CLI first, then the engine)
 gitswitch doctor     # health-check your install
 gitswitch upgrade    # check for & install the latest npm version
 gitswitch repair     # re-install the engine binary (fixes a broken install)
-gitswitch uninstall  # remove it entirely (incl. the npm package)
+gitswitch uninstall  # remove everything (accounts, SSH entries, binary, npm package)
 gitswitch version    # print the version (flags: -v, -V, --version)
 gitswitch help       # show all commands (flags: -h, --help)
 ```
+
+> 💡 **`gitswitch update` is all you need** — unlike an install-only command, `update` first pulls the latest CLI from npm (`npm install -g gitswitch-wizard@latest`), then updates the engine binary in place. Your accounts, SSH keys and SSH config are **preserved** — GitSwitch only ever manages its own blocks.
+>
+> ```bash
+> gitswitch update      # this one command keeps you current — no need to npm install again
+> ```
 
 > 💡 Already installed? The global command is also the upgrade path — npm's **global** install gracefully installs the latest version while preserving all of your accounts, SSH keys and SSH config:
 >
@@ -42,6 +50,15 @@ gitswitch help       # show all commands (flags: -h, --help)
 > ```
 
 ---
+
+## ✨ v2.3.0 — update works from the CLI (like theamify)
+
+| Feature | Details |
+|---|---|
+| 🔄 **`gitswitch update` pulls from npm** | Running `gitswitch update` now checks the registry, offers to `npm install -g gitswitch-wizard@latest`, then updates the engine binary in place — a single command keeps you current without a manual `npm install` |
+| 🔁 **`upgrade` still checks npm too** | `gitswitch upgrade` remains a pure npm-version check; `gitswitch update` does the full thing (CLI + engine), matching theamify |
+| 🧰 **`install` / `wizard` aliases** | Explicit aliases for the interactive install/repair wizard |
+| 🔒 **Data & SSH preserved** | The update never touches foreign SSH entries or unrelated keys — only GitSwitch-managed blocks, with a backup |
 
 ## ✨ v2.2.4 — command-not-found clarity
 
