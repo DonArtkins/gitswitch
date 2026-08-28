@@ -43,6 +43,13 @@ gitswitch help       # show all commands (flags: -h, --help)
 
 ---
 
+## ✨ v2.2.4 — command-not-found clarity
+
+| Feature | Details |
+|---|---|
+| 💡 **Current-terminal hint** | After uninstall, `gitswitch` is fully deleted — a **new terminal** reports `bash: gitswitch: command not found`. If your *current* shell still says `No such file or directory`, that's bash's cached command path — clear it with `hash -r` |
+| 🗑️ **Still removes everything** | Engine binaries, ALL accounts & backups, GitSwitch-managed SSH entries, npm package and rc markers |
+
 ## ✨ v2.2.3 — complete uninstall
 
 | Feature | Details |

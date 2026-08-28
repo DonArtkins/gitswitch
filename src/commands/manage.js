@@ -172,6 +172,7 @@ export async function runUninstallWizard() {
     `Uninstalled.${removedBins ? ` ${removedBins} engine binary(ies) removed.` : ''} Account data ${dataGone ? 'deleted.' : 'could not be deleted — run: rm -rf ~/.gitswitch'} ${npmRemoved ? 'gitswitch-wizard npm package removed — the gitswitch command is gone.' : 'gitswitch-wizard npm package could not be removed automatically — run: npm uninstall -g gitswitch-wizard'}`,
   ));
   p.log.message(pc.dim('After uninstall, `gitswitch` reports: bash: gitswitch: command not found'));
+  p.log.message(pc.dim('If this terminal still shows "No such file or directory", clear bash\'s cached command path with: hash -r (or open a new terminal).'));
 }
 
 /**
