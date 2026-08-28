@@ -30,7 +30,7 @@ process.on('SIGINT', () => terminateAndRestore('SIGINT', 130));  // Ctrl+C
 process.on('SIGTERM', () => terminateAndRestore('SIGTERM', 143));
 
 /** Commands forwarded straight to the GitSwitch bash engine. */
-const ENGINE_COMMANDS = ['whoami', 'active', 'list', 'accounts', 'version', '--version', '-v', 'help', '-h'];
+const ENGINE_COMMANDS = ['whoami', 'active', 'list', 'accounts'];
 
 /**
  * Forward argv to the bash engine and mirror its exit status onto this
@@ -52,10 +52,16 @@ ${pc.bold('gitswitch')} ${pc.dim(`v${pkg.version}`)} — multi-GitHub account ma
 ${pc.bold('Usage:')}
   gitswitch                    Run the install / update wizard
   gitswitch use <account>      ⭐ Set the active account (quick switch)
+  gitswitch switch <account>   Alias for \`use\`
   gitswitch whoami             Show the currently active account
+  gitswitch status             Same as \`whoami\`
   gitswitch list               List stored accounts
   gitswitch doctor             Diagnose installation & environment
-  gitswitch uninstall          Uninstall (asks before deleting anything)
+  gitswitch upgrade            Check for & install the latest npm version
+  gitswitch repair             Re-install the engine binary (fixes broken install)
+  gitswitch uninstall          Uninstall entirely (asks before deleting anything)
+  gitswitch version            Print the version
+  gitswitch help               Show this help
 `);
 }
 
@@ -67,6 +73,13 @@ const main = defineCommand({
   },
   async run({ args }) {
     const [cmd, ...rest] = args._;
+
+    // citty parses `-V` as a boolean flag into args.V (never reached via args._);
+    // treat it as a version request like the other aliases.
+    if (args.V) {
+      console.log(`gitswitch v${pkg.version}`);
+      return undefined;
+    }
 
     // No arguments → the wizard (install / update / repair)
     if (!cmd) return runWizard();
@@ -86,9 +99,28 @@ const main = defineCommand({
         return runRepair();
       case 'uninstall':
         return runUninstallWizard();
+      case 'version':
+      case '-v':
+      case '-V':
+      case '--version':
+        console.log(`gitswitch v${pkg.version}`);
+        return undefined;
+      case 'help':
+      case '-h':
+      case '--help':
+        printUsage();
+        return undefined;
       case 'use':
       case 'switch':
         return forwardEngine(['use', ...rest]);
+      case 'whoami':
+      case 'active':
+      case 'status':
+        // Engine supports `whoami|active`; `status` is an npm-side alias.
+        return forwardEngine(['whoami', ...rest]);
+      case 'list':
+      case 'accounts':
+        return forwardEngine([cmd, ...rest]);
       default:
         if (ENGINE_COMMANDS.includes(cmd)) return forwardEngine(args._);
         console.error(pc.red(`Unknown command: ${cmd}`));

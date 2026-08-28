@@ -18,13 +18,15 @@ The `-g` global flag puts the `gitswitch` binary on your system PATH (e.g. `/usr
 
 ```bash
 gitswitch            # open the interactive wizard (self-update check → install/repair → menu)
-gitswitch whoami     # see your active account
-gitswitch list       # list stored accounts
-gitswitch use <name> # switch to an account
+gitswitch use <name> # switch to an account (alias: switch)
+gitswitch whoami     # see your active account (aliases: active, status)
+gitswitch list       # list stored accounts (alias: accounts)
 gitswitch doctor     # health-check your install
 gitswitch upgrade    # check for & install the latest npm version
 gitswitch repair     # re-install the engine binary (fixes a broken install)
 gitswitch uninstall  # remove it entirely (incl. the npm package)
+gitswitch version    # print the version (flags: -v, -V, --version)
+gitswitch help       # show all commands (flags: -h, --help)
 ```
 
 > 💡 Already installed? The global command is also the upgrade path — npm's **global** install gracefully installs the latest version while preserving all of your accounts, SSH keys and SSH config:
@@ -40,6 +42,24 @@ gitswitch uninstall  # remove it entirely (incl. the npm package)
 > ```
 
 ---
+
+## ✨ v2.2.2 — uninstall crash hotfix
+
+| Feature | Details |
+|---|---|
+| 🩹 **`ReferenceError: path is not defined` fixed** | The v2.2.1 uninstall crashed while stripping PATH/SSH-agent markers from `~/.bashrc`/`~/.zshrc` — `cleanRcMarkers` used `path`/`os`/`fs` without importing them. Now fixed with proper `node:` imports and guarded by regression tests. |
+| 🔄 **Engine lockstep to v2.2.2** | Bundled engine `GS_VERSION` bumped to match the npm package — no more "update available" nag after a fresh install. |
+
+## ✨ v2.2.1 — complete command surface & zero-trace uninstall
+
+| Feature | Details |
+|---|---|
+| 🏷️ **npm CLI answers `version`** | `gitswitch version` / `-v` / `-V` / `--version` now print the **npm package** version directly (no longer forwarded to the engine), so it always matches `npm view gitswitch-wizard version` |
+| 💬 **`gitswitch help`** | Shows the full npm CLI usage (all commands + aliases), not just the engine's |
+| ♻️ **Aliases** | `switch` (use), `status`/`active` (whoami), `accounts` (list) |
+| 🧹 **Zero-trace uninstall** | Uninstall removes the engine, the npm package **and** strips leftover `# gitswitch-wizard PATH` + `# GitSwitch SSH Agent` blocks from `~/.bashrc`/`~/.zshrc` — after which `gitswitch` gives a normal `command not found` |
+| 🔄 **Engine lockstep** | Bundled engine `GS_VERSION` kept aligned with the npm package so the wizard stops nagging to update every run |
+| 🩹 **Uninstall crash fixed** | The previous uninstall could crash with `ReferenceError: path is not defined` (missing `path` import in rc-marker cleanup) — fixed & covered by regression tests |
 
 ## ✨ v2.1.3 — update & version-alignment fixes
 
@@ -64,7 +84,7 @@ gitswitch uninstall  # remove it entirely (incl. the npm package)
 | 🔗 **Org ↔ Personal linking** | Orgs display grouped under the personal account that owns them |
 | ⭐ **Active account switching** | One keypress / one command to flip between personal and org identities |
 | 🩺 **`gitswitch doctor`** | Diagnose installation, accounts, SSH config health & dependencies |
-| 🏷️ **Versioning** | `gitswitch version` reports the engine version; wizard compares it against bundled |
+| 🏷️ **Versioning** | `gitswitch version` reports the **npm package** version (falling back to the engine when run through `npx`); wizard compares it against bundled |
 
 ## ✨ What was new in v2.0
 
@@ -360,7 +380,7 @@ is left behind even though the npm package updated.
 
 **Diagnose the mismatch:**
 ```bash
-gitswitch version                    # engine version (may lag)
+gitswitch version                    # installed version (matches npm when globally installed)
 npm view gitswitch-wizard version    # npm package version
 ls -la /usr/local/bin/gitswitch      # engine path + timestamp
 grep -n GS_VERSION /usr/local/bin/gitswitch
@@ -460,7 +480,7 @@ Choose whether to keep or delete your stored accounts.
 | `gitswitch list` | List stored accounts |
 | `gitswitch doctor` | Diagnose installation, accounts, SSH config & dependencies |
 | `gitswitch uninstall` | Uninstall — asks before deleting anything |
-| `gitswitch version` | Print the engine version (used by the wizard for update checks) |
+| `gitswitch version` | Print the installed version (npm package; falls back to engine under `npx`) |
 
 ---
 
@@ -577,7 +597,7 @@ This lets the "Publish to NPM" workflow publish **without storing any npm token*
 4. Verify:
    ```bash
    npm view gitswitch-wizard version   # shows the new version (~1 min CDN delay)
-   npx gitswitch-wizard version        # engine version users will get
+   npx gitswitch-wizard version        # version under npx (falls back to the engine)
    ```
 
 ### Troubleshooting a failed release

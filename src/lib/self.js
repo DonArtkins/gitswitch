@@ -1,5 +1,8 @@
 import { execa } from 'execa';
 import pc from 'picocolors';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -35,11 +38,10 @@ export async function getLatestVersion() {
  * leaves zero traces in shell startup files:
  *   - the `# gitswitch-wizard PATH` + follow-up `export PATH=` line
  *   - the `# GitSwitch SSH Agent — auto-start` block (through its closing `fi`)
+ * @param {string} [homeDir] override the home directory (used by tests)
  */
-export async function cleanRcMarkers() {
-  const os = require('node:os');
-  const fs = require('node:fs');
-  const rcs = ['.bashrc', '.zshrc'].map((f) => path.join(os.homedir(), f));
+export async function cleanRcMarkers(homeDir = os.homedir()) {
+  const rcs = ['.bashrc', '.zshrc'].map((f) => path.join(homeDir, f));
   const pathMarker = '# gitswitch-wizard PATH';
   const sshMarker = 'GitSwitch SSH Agent';
   for (const rc of rcs) {
@@ -55,9 +57,10 @@ export async function cleanRcMarkers() {
         }
         if (line.includes(sshMarker)) {
           // Skip lines until the closing `fi` of the SSH-agent block.
+          // The while stops *on* the `fi`; the for-loop's `continue` then
+          // advances past it (no extra `i++` here or we skip a following line).
           if (lines[i + 1] && /^\s*if /.test(lines[i + 1])) {
             while (i < lines.length && !/^\s*fi\b/.test(lines[i])) i++;
-            i++; // skip the `fi`
           }
           continue;
         }
