@@ -7,7 +7,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,3 +21,6 @@ jobs:
         run: bash -n vendor/gitswitch.sh
       - name: Run tests
         run: npm test
+      - name: Package dry-run
+        run: npm publish --dry-run --access public
+        if: matrix.os == 'ubuntu-latest'

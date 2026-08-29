@@ -51,6 +51,13 @@ gitswitch help       # show all commands (flags: -h, --help)
 
 ---
 
+## ✨ v2.4.0 — cross-platform (Linux + macOS)
+
+| Feature | Details |
+|---|---|
+| 🖥️ **Linux + macOS support** | gitswitch relies on OpenSSH, which ships on both. Unsupported OSes get a clear error instead of a partial failure. CI runs on `ubuntu-latest` and `macos-latest` |
+| 🧭 **Cross-platform CI** | The test matrix + docs are now consistent across all three CLI packages |
+
 ## ✨ v2.3.0 — update works from the CLI (like theamify)
 
 | Feature | Details |

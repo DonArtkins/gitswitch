@@ -7,7 +7,7 @@
 #   Desc    : Manage multiple GitHub accounts with SSH on Linux
 # ================================================================
 
-GS_VERSION="2.3.0"
+GS_VERSION="2.4.0"
 
 # Colors
 RED='\033[0;31m';    GREEN='\033[0;32m';   YELLOW='\033[1;33m'

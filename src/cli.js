@@ -76,6 +76,14 @@ const main = defineCommand({
   async run({ args }) {
     const [cmd, ...rest] = args._;
 
+    // GitSwitch relies on OpenSSH, which ships on Linux and macOS. Refuse
+    // unsupported OSes up-front with a clear message.
+    if (process.platform !== 'linux' && process.platform !== 'darwin') {
+      console.error(pc.red('gitswitch requires OpenSSH and is supported on Linux and macOS only.'));
+      process.exitCode = 1;
+      return undefined;
+    }
+
     // citty parses `-V` as a boolean flag into args.V (never reached via args._);
     // treat it as a version request like the other aliases.
     if (args.V) {
